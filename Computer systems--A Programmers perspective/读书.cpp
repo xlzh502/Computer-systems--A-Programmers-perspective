@@ -60,16 +60,21 @@ bool is_longlong(const long long& t)
     return true;
 }
 
-//本打算复制、粘贴个 is_int 模板函数，但是发现这样写个宏，更好些。
+//本打算仿照is_longlong  复制、粘贴个 is_int 模板函数，但是发现这样写个宏，更好些。
 #define IS_TYPE(TYP)  template <typename T>  bool is_##TYP(const T & t) {  return false ;} \
                                                                             bool is_##TYP(const TYP& t) {   return true ;}
 
 IS_TYPE(int) // is_int 模板函数
 IS_TYPE(long)
 
-#define IS_TYPE(a,b,c)  template <typename T>  bool is_##a##b##c(const a b c & t) {  return false ;} \
+#define IS_TYPE(a,b,c)  template <typename T>  bool is_##a##b##c(const T& t) {  return false ;} \
                                                                             bool is_##a##b##c(const a b c & t) {   return true ;}
-IS_TYPE(unsigned, long, long)
+IS_TYPE(unsigned, long, long)  // is_unsignedlonglong
+IS_TYPE(unsigned, long, )  // is_unsignedlong
+IS_TYPE(unsigned, int, )  // is_unsignedint
+
+
+
 
 int main(int argc, char* argv[])
 {
@@ -114,16 +119,30 @@ int main(int argc, char* argv[])
     if (sizeof(char*) == 8)
     {
         // 64位机器
-        assert(is_long(-2147483648) == true);
+        
+        assert(is_unsignedlong(-2147483648) == true);
         assert(is_int(-0x7FFFFFFF - 1) == true);
+        if (sizeof(long) == 4)
+        {
+            // Visual C++ 2013:   sizeof(long) == 4。 
+            assert(is_unsignedlonglong(-9223372036854775808));
+            assert(is_unsignedlonglong(0x8000000000000000));
+        }
+        else if (sizeof(long) == 8)
+        {
+            // GCC  ?
+            assert(is_unsignedlong(-9223372036854775808));
+            assert(is_unsignedlong(0x8000000000000000));
+        }
     }
     else if (sizeof(char*) == 4)
     {
          // 32位机器
+        assert(sizeof(long) == 4 && sizeof(long long) == 8);   // Visual C++ 2013是这样的。 不清楚GCC是怎样的。
         assert(is_unsigned(-2147483648) == true);
         assert(is_int(-0x7FFFFFFF - 1) == true);
-        assert(is_unsignedlonglong(-9223372036854775808) && is_unsigned(-9223372036854775808));
-        assert(is_unsignedlonglong(0x8000000000000000) && is_unsigned(0x8000000000000000 ));
+        assert(is_unsignedlonglong(-9223372036854775808));
+        assert(is_unsignedlonglong(0x8000000000000000));
     }
 
 

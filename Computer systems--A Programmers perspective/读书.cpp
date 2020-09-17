@@ -1,6 +1,7 @@
 
 #include <string>
 #include <assert.h>
+#include <iostream>
 
 typedef  char const* byte_pointer;
 
@@ -73,7 +74,14 @@ IS_TYPE(unsigned, long, long)  // is_unsignedlonglong
 IS_TYPE(unsigned, long, )  // is_unsignedlong
 IS_TYPE(unsigned, int, )  // is_unsignedint
 
-
+int uadd_ok(unsigned x, unsigned y)
+{
+    unsigned result = x + y;
+    if (result < x)
+        throw std::exception("overflow");
+    else
+        return result;
+}
 
 
 int main(int argc, char* argv[])
@@ -141,10 +149,20 @@ int main(int argc, char* argv[])
         assert(sizeof(long) == 4 && sizeof(long long) == 8);   // Visual C++ 2013是这样的。 不清楚GCC是怎样的。
         assert(is_unsigned(-2147483648) == true);
         assert(is_int(-0x7FFFFFFF - 1) == true);
-        assert(is_unsignedlonglong(-9223372036854775808));
+       
+        assert(is_unsignedlonglong(-9223372036854775808));   // 验证： DATA:TMIN 文档中， Practice  Problem4的表格。 遗憾的是，C++和C编译器，还是不一样的。
         assert(is_unsignedlonglong(0x8000000000000000));
     }
 
+    try {
+        uadd_ok(0xffffffffu, 2);  // P115,  Practice Problem 2.27
+    }
+    catch (...)
+    {
+        std::cout<<"overflow exception happend"<<"\n";
+    }
+
+    getchar();
 
 }
 

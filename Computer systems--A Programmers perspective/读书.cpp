@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <iostream>
 
+
+
 typedef  char const* byte_pointer;
 
 std::string byteHex(unsigned char byte)
@@ -74,11 +76,33 @@ IS_TYPE(unsigned, long, long)  // is_unsignedlonglong
 IS_TYPE(unsigned, long, )  // is_unsignedlong
 IS_TYPE(unsigned, int, )  // is_unsignedint
 
-int uadd_ok(unsigned x, unsigned y)
-{
+int uadd_ok(unsigned x, unsigned y)  // u == unsigned
+{ // P115,  Practice Problem 2.27
     unsigned result = x + y;
     if (result < x)
         throw std::exception("overflow");
+    else
+        return result;
+}
+
+int tadd_ok(int x, int y) // t == two's complement
+{  // P120,  Practice Problem 2.30
+    int result = x + y;
+    if (result <=-2 && x > 0 && y > 0) // 这里需要注意 result < 0, 而不是result<=0
+        throw std::exception("positive overflow");
+    else if (result >= 0 && x < 0 && y < 0)  // 这里需要注意 result >= 0, 而不是result > 0. 原因是： P117 对于 -2^(w-1) <= x, y < 2^(w-1)来说， x+y的取值范围是 [ **, ** )  前开后闭区间
+        throw std::exception("negative overflow");
+    else
+        return result;
+}
+
+int tsub_ok(int x, int y) // P121  : Practice problem 2.32
+{
+    int result = x - y;
+    if (result >= 1 && x < 0 && y>0)
+        throw std::exception("negative overflow");
+    else if (result <= -1 && x > 0 && y < 0)
+        throw std::exception("positive overflow");
     else
         return result;
 }
@@ -148,18 +172,50 @@ int main(int argc, char* argv[])
          // 32位机器
         assert(sizeof(long) == 4 && sizeof(long long) == 8);   // Visual C++ 2013是这样的。 不清楚GCC是怎样的。
         assert(is_unsigned(-2147483648) == true);
-        assert(is_int(-0x7FFFFFFF - 1) == true);
+        assert(is_int(INT_MIN) == true);
        
         assert(is_unsignedlonglong(-9223372036854775808));   // 验证： DATA:TMIN 文档中， Practice  Problem4的表格。 遗憾的是，C++和C编译器，还是不一样的。
         assert(is_unsignedlonglong(0x8000000000000000));
     }
 
     try {
-        uadd_ok(0xffffffffu, 2);  // P115,  Practice Problem 2.27
+        uadd_ok(UINT_MAX, 2);  // P115,  Practice Problem 2.27
     }
     catch (...)
     {
         std::cout<<"overflow exception happend"<<"\n";
+    }
+
+    try {
+        tadd_ok(INT_MAX, INT_MAX);  // P120,  Practice Problem 2.30
+    }
+    catch (std::exception e)
+    {
+        std::cout << e.what() << "\n";
+    }
+    
+    try {
+        tadd_ok(-INT_MAX, -3); // P120,  Practice Problem 2.30
+    }
+    catch (std::exception e)
+    {
+        std::cout << e.what() << "\n";
+    }
+
+    try {
+        tsub_ok(INT_MIN, INT_MAX); // P121,  Practice Problem 2.32
+    }
+    catch (std::exception e)
+    {
+        std::cout << e.what() << "\n";
+    }
+
+    try {
+        tsub_ok(INT_MAX, INT_MIN); // P121,  Practice Problem 2.32
+    }
+    catch (std::exception e)
+    {
+        std::cout << e.what() << "\n";
     }
 
     getchar();

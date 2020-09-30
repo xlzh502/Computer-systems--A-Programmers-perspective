@@ -88,7 +88,7 @@ int uadd_ok(unsigned x, unsigned y)  // u == unsigned
 int tadd_ok(int x, int y) // t == two's complement
 {  // P120,  Practice Problem 2.30
     int result = x + y;
-    if (result <=-2 && x > 0 && y > 0) // 这里需要注意 result < 0, 而不是result<=0
+    if (result <=-2 && x > 0 && y > 0) // 这里需要注意 result <=-2, 书中  P120   提到是result < 0 虽然不错，但是<=-2更加精确
         throw std::exception("positive overflow");
     else if (result >= 0 && x < 0 && y < 0)  // 这里需要注意 result >= 0, 而不是result > 0. 原因是： P117 对于 -2^(w-1) <= x, y < 2^(w-1)来说， x+y的取值范围是 [ **, ** )  前开后闭区间
         throw std::exception("negative overflow");
@@ -98,6 +98,7 @@ int tadd_ok(int x, int y) // t == two's complement
 
 int tsub_ok(int x, int y) // P121  : Practice problem 2.32
 {
+    // 书中给出的答案是：如果y是TMIN，那么若x是负数，则tadd_ok会抛出异常，但是tsub_ok却不会；我的想法是若y是TMIN，若x是正数，tsub_ok会抛异常，但是tadd_ok却不会
     int result = x - y;
     if (result >= 1 && x < 0 && y>0)
         throw std::exception("negative overflow");
@@ -105,6 +106,70 @@ int tsub_ok(int x, int y) // P121  : Practice problem 2.32
         throw std::exception("positive overflow");
     else
         return result;
+}
+
+int tmul_ok(int x, int y)
+{
+#if 笨蛋的实现方法
+    long long result = (long long)x*y;
+    int high32 = result >> 32; // 取高32位的补码的值
+    int low32 = (result << 32) < 0; // 取低32位的 最高位 符号位的值，是1还是0
+    if (high32 + low32 == 0)  // 没有溢出，则 根据 Practice Problem 2.35的证明，相加是0
+        return x*y;
+    else
+        throw std::exception("overflow");
+#else
+    long long result = (long long)x*y;
+    if ((int)result != result)
+        throw  std::exception("overflow");
+    else
+        return x*y;
+#endif
+}
+
+int simpl_mult(int x, int y)
+{ // P128   Form A
+    int result = 0;
+    int beishu = (y > 0) ? y : (-y);
+    int mult = 0;
+    while ((beishu >>1) != 0)
+    {
+        result += (beishu % 2) ? (x<<mult) : 0;
+        beishu = beishu >> 1;
+        mult +=1;
+    }
+    result += beishu ? (x<<mult) : 0;
+    result = (y < 0) ? -result : result;
+    return result;
+}
+
+int div16(int x)
+{
+    // P131   Practice problem 2.42
+    int diff = (((x + x)<<27) >>27) >> 1;  // 这个写法，有个问题，就是x+x可能会有溢出，因此，是不安全的。
+    return (x - diff) >> 4;
+}
+
+unsigned f2u(float* x)
+{
+    // Problem 2.83
+    return  *((unsigned*)x);
+}
+
+int float_ge(float x, float y)
+{
+    // Problem 2.83
+    // P141  浮点数比较大小，无需进行浮点运算；只需按照unsigned integer来进行比较； 负数，则是 绝对值越大则越小。
+    unsigned ux = f2u(&x);
+    unsigned uy = f2u(&y);
+
+    unsigned sx = ux >> 31;
+    unsigned sy = uy >> 31;
+
+    return  ((ux << 1) == 0 && (uy << 1) == 0) ||
+        (!sx && sy) ||
+        (!sx && !sy && ux >= uy) ||
+        (sx && sy && ux <= uy);
 }
 
 
@@ -217,6 +282,25 @@ int main(int argc, char* argv[])
     {
         std::cout << e.what() << "\n";
     }
+
+    try {
+        tmul_ok(-3, 4); // P121,  Practice Problem 2.32
+        tmul_ok(INT_MAX, 0x1000); // P121,  Practice Problem 2.32
+    }
+    catch (std::exception e)
+    {
+        std::cout << e.what() << "\n";
+    }
+    simpl_mult(-3, 4);
+    simpl_mult(-3, -4);
+
+
+    assert(div16(-33) == -2 && div16(33) == 2);
+
+    assert(float_ge(-0.0, 0.0)==1);
+    assert(float_ge(4.0, 3.0) == 1);
+    assert(float_ge(-3.0, -4.0) == 1);
+    assert(float_ge(4.0, 3.0) == 1);
 
     getchar();
 

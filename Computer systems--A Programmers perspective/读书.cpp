@@ -17,7 +17,7 @@ std::string byteHex(unsigned char byte)
 }
 
 std::string show_bytes(byte_pointer buf, int cnt)
-{
+{ // P153:    2.55,  2.66, 2.57, 
     std::string result = "";
     for (int i = 0; i < cnt; i++)
         result += byteHex(buf[i]);
@@ -200,6 +200,27 @@ void  prob_2_54()
 
 }
 
+unsigned prob_2_59(unsigned x, unsigned y)
+{
+    return (x & 0xffffff00) | (y & 0xff);
+}
+
+bool is_big_endian()
+{
+    // Problem 2.58
+    char number[4] = {0x12, 0x34, 0x56, 0x78};
+    unsigned a = *(unsigned*)number;
+    return a == 0x12345678;  // Big endian的机器，高位数字存在低地址； small endian则是 低位数字存在低地址。
+}
+
+unsigned put_byte(unsigned x, unsigned char b, int i)
+{
+    // problem 2.60
+    unsigned temp = ((unsigned)b) << (i * 8);
+    unsigned mask = 0xff << (i * 8);
+    return  (x & (~mask)) | temp;
+}
+
 int main(int argc, char* argv[])
 {
     int i = 12345;
@@ -330,7 +351,12 @@ int main(int argc, char* argv[])
     assert(float_ge(4.0, 3.0) == 1);
 
     prob_2_54();
-
+    
+    assert(prob_2_59(0x89abcdef, 0x76543210) == 0x89abcd10);
+    assert(put_byte(0x12345678,0xab,2) == 0x12ab5678);
+    assert(put_byte(0x12345678,0xab,0) == 0x123456ab);
+    
+    std::cout <<"this machine is " << (is_big_endian() ? "big-endian" : "small-endian")<<std::endl;
     getchar();
 
 }

@@ -213,6 +213,78 @@ bool is_big_endian()
     return a == 0x12345678;  // Big endian的机器，高位数字存在低地址； small endian则是 低位数字存在低地址。
 }
 
+bool prob_2_61(int x, char func)
+{
+    // Problem 2.61
+    bool result = false;
+
+    switch (func)
+    {
+    case 'A':
+        result = x;
+        break;
+    case 'B':
+        result = (x + 1);
+        break;
+    case 'C':
+        result = (x & 0xff000000);
+        break;
+    case 'D':
+        result = (x & 0xff - 0xff);
+        break;
+    default:
+        throw("function is illegal");
+    }
+    return result;
+}
+
+bool int_shifts_are_logical()
+{
+    // Prob 2.62
+    int totalBits = sizeof(int) <<3; 
+    int d = -INT_MAX - 1;  // -INT_MAX-1   ==  INT_MIN
+    return  (d >> (totalBits - 1)) == 1;
+}
+
+int sra(int x, int k)
+{
+    // problem 2.63
+    int xsrl = (unsigned)x >> k;
+    int mostSigBit = (1 << (sizeof(int) * 8 - k - 1))  & xsrl;  // mostSigBit == most significant bit
+    int signExtention = ((1 << (sizeof(int) * 8 - 1)) - mostSigBit) << 1;
+    return xsrl | signExtention;
+}
+
+unsigned srl(unsigned x, int k)
+{
+        // problem 2.63
+    unsigned xsra = (int)x >> k;
+    unsigned mostSigBit = (1 << (sizeof(int) * 8 - k - 1)) & xsra;
+    return  xsra + (mostSigBit << 1); 
+}
+
+int any_even_one(unsigned x)
+{
+    // problem 2.64
+    int mask = 0x55555555;
+    return  x & mask;
+}
+
+int even_ones(unsigned x)
+{
+    // problem 2.65
+    unsigned result = (x >> 8) ^ x;
+    result = (x >> 16) ^ result;
+    result = (x >> 24) ^ result;
+    
+    result = (result >> 4) ^ result;
+
+    result = (result >> 2) ^ result;
+
+    result = (result >> 1) ^ result;
+    return  !(result & 0x1);
+}
+
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
     // problem 2.60
@@ -357,6 +429,13 @@ int main(int argc, char* argv[])
     assert(put_byte(0x12345678,0xab,0) == 0x123456ab);
     
     std::cout <<"this machine is " << (is_big_endian() ? "big-endian" : "small-endian")<<std::endl;
+
+    std::cout << "int right-shift is " << (!int_shifts_are_logical() ? " NOT " : "" )<< "logical" << std::endl;
+
+    assert(sra(0xff000000, 2) == ((-INT_MAX-1+0x7f000000) >> 2));
+    assert(srl(0xff000000, 2) == (0xff000000u >> 2));
+    assert(even_ones(0x01041040) == 1);
+    assert(even_ones(0x01041014) == 0);
     getchar();
 
 }

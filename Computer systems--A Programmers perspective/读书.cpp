@@ -172,6 +172,33 @@ int float_ge(float x, float y)
         (sx && sy && ux <= uy);
 }
 
+void  prob_2_54()
+{
+    // P151   Practice problem 2.54
+
+    //   x == (int)(float)x  的反例
+    int x = 0x1000001;
+    assert((int)(float)x  == 0x1000000);  // Round-to-even
+    x = 0x2000003;
+    assert((int)(float)x == 0x2000004);  // round-up
+    x = 0x2000006;
+    assert((int)(float)x == 0x2000008);  // round-to-even
+    x = 0x2000001;
+    assert((int)(float)x == 0x2000000); // round-down
+
+    //  (f+d)-f == d  的反例
+    double d = 9007199254740994L;  // 2^53  == 9007199254740992  ;    而    9007199254740994 = 2^53  +  ε  ， 其中 ε = (2^(-52)) * (2^53) = 2 
+    float f = 1.0;
+    assert((f + d) - f != d);  // f+d导致 round-to-even成为 d+2， 而 (f+d)-f的结果本应该是d+1，但是，再次出发round-to-even所以是d+2;
+
+    d = 1e20;  // 1e20 == 2^(66.34),  所以  ε = 2^(66-52) = 2^14
+    f = 8192; // 8192 == 2^13 == (2^(66-52)) / 2 ==  ε/2
+    assert((f+d) - d == 0);  //因为ε/2是halfway between，所以f+d发生了round-to-even, 由于1e20可以被 2^(66-52)整除，所以断定fraction部分的末位（fraction的最后一位）是0，所以round-to-even导致f+d依然等于1e20 
+    f = 8192 + 1;  // 8192 + 1 不再是 halfway between,所以 f+d发生了Round-up， 因此 (f + d) 与 d之间 相差一个 ε
+    assert((f + d) - d == 2*8192); // f+d 发生了Round-up, 所以 (f+d)-d  等于  ε
+
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -301,6 +328,8 @@ int main(int argc, char* argv[])
     assert(float_ge(4.0, 3.0) == 1);
     assert(float_ge(-3.0, -4.0) == 1);
     assert(float_ge(4.0, 3.0) == 1);
+
+    prob_2_54();
 
     getchar();
 

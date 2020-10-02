@@ -272,7 +272,7 @@ int any_even_one(unsigned x)
 
 int even_ones(unsigned x)
 {
-    // problem 2.65。 这个题，我花了一整天，才突然想出来怎么解。
+    // problem 2.65。 这个题，我花了一整天，才突然想出来怎么解: 目标是让所有的位做异或，如果有偶数个1，那么异或结果一定是0。由于限制了操作次数，所以，就要考虑如何更高效的做异或，因此就有了下面的计算。
     unsigned result = (x >> 8) ^ x;
     result = (x >> 16) ^ result;
     result = (x >> 24) ^ result;
@@ -295,6 +295,42 @@ int leftmost_one(unsigned x)
     x |= x >> 16;
     return x - (x >> 1);
 }
+
+int int_size_is_32(char part)
+{  // Problem 2.67
+    switch (part)
+    {
+    case 'B':
+        //     B问题
+            {
+                int set_msb = 1 << 31;
+                int beyond_msb = set_msb << 1;
+                return set_msb && !beyond_msb;
+            }
+    case 'C':
+        //  C问题 :  规定 各位 的序号是0
+            {
+                int bit15th = 1 << 15;
+                int bit16th = bit15th << 1;
+                int bit31th = bit16th << 15;
+                int bit32th = bit31th << 1;
+                return !bit32th && bit31th && bit16th && bit15th;
+            }
+    }
+
+}
+
+
+
+int lower_bits(int x, int n)
+{
+    // prob 2.68
+    int mask = (1 << (n-1));
+    mask = mask << 1;
+    mask -= 1;
+    return  x&mask;
+}
+
 
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
@@ -451,6 +487,14 @@ int main(int argc, char* argv[])
     assert(leftmost_one(0xff00) == 0x8000);
     assert(leftmost_one(0x6600) == 0x4000);
     assert(leftmost_one(0) == 0);
+
+    assert(int_size_is_32('B') && int_size_is_32('C'));
+    assert(lower_bits(0x78abcdef, 8) == 0xef);
+    assert(lower_bits(0x78abcdef, 16) == 0xcdef);
+    assert(lower_bits(0x78abcdef, 32) == 0x78abcdef);
+    assert(lower_bits(0x78abcdef, 1) == 1);
+
+
     getchar();
 
 }

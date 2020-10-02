@@ -348,7 +348,15 @@ int fits_bits(int x, int n)
     return result; 
 }
 
-
+typedef unsigned packed_t;
+int xbyte(packed_t word, int bytenum)
+{
+    // problem 2.71       应用 二进制 补码的定义： 1Xn-1...X0 = -2^n + Xn-1*2^(n-1) + ... X0*1
+    int result = (word >> (bytenum << 3)) & 0xff;
+    int signBit = (result & 0x80);
+    result = result - (signBit << 1);  // 这里 构造出 -2^n
+    return result;
+}
 
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
@@ -515,6 +523,10 @@ int main(int argc, char* argv[])
     assert(rotate_right(0x12345678, 20) == 0x45678123);
     assert(rotate_right(0x12345678, 0) == 0x12345678);
     assert(fits_bits(7, 4) && fits_bits(-8, 4) && !fits_bits(-9,4) && !fits_bits(8,4));
+    assert(xbyte(0x8012c123, 0) == 0x23);
+    assert(xbyte(0x8012c123, 3) == -0x80);
+    assert(xbyte(0x8012c123, 1) == -63);
+
     getchar();
 
 }

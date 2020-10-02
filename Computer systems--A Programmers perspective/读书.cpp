@@ -293,7 +293,7 @@ int leftmost_one(unsigned x)
     x |= x >> 4;
     x |= x >> 8;
     x |= x >> 16;
-    return (x >> 1) + 1;
+    return x - (x >> 1);
 }
 
 unsigned put_byte(unsigned x, unsigned char b, int i)
@@ -450,6 +450,7 @@ int main(int argc, char* argv[])
 
     assert(leftmost_one(0xff00) == 0x8000);
     assert(leftmost_one(0x6600) == 0x4000);
+    assert(leftmost_one(0) == 0);
     getchar();
 
 }

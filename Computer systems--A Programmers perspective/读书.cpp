@@ -360,6 +360,8 @@ int xbyte(packed_t word, int bytenum)
 
 void copy_int(int val, void *buf, int maxbytes)
 {
+    //  Prob 2.72
+
 #define 这样写依然是错误的 0
 
 #if (这样写依然是错误的)
@@ -367,7 +369,9 @@ void copy_int(int val, void *buf, int maxbytes)
         memcpy(buf, (void*)&val, sizeof(val));
 #else
 
-    assert(-1 < 3U == false); // 一个令人惊讶的、令人发指的事实。。。。
+    assert(-1 < 3U == false); // 一个令人惊讶的、令人发指的事实:   两个不同的type作比较，首先是其中一个类型做转换 成为相同的type，原因是：只有同类型的东西才能做比较： -1会被提升成为unsigned，然后和3U比较，T2U(-1) 是UINT_MAX（T2U是书中的一个转换操作符），UINT_MAX一定大于3U。
+
+    assert(3U * -1 == 4294967293); // 一个微软面试题目： 两个不同type的数据做运算，必须先统一到同一个type。 3U是unsigned，1是int，  T2U(-1) ==UINT_MAX，而UINT_MAX*3 == 4294967293 （计算过程需要手动列出2进制位，然后移动1位，再相加）
 
     if (maxbytes <= 0) // 必须把 <0的情况，单独列出来，否则 maxbytes>=sizeof(int) 在maxbytes是负数的时候，依然会是true
         return;

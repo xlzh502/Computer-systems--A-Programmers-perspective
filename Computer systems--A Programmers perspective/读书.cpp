@@ -331,6 +331,13 @@ int lower_bits(int x, int n)
     return  x&mask;
 }
 
+unsigned rotate_right(unsigned x, int n)
+{
+    // prob 2.69 :  考虑下 n ==0的时候，  mask 等于 -1， 而 x>>0 和 x<<(w*8) 都等于 x，所以 n==0的时候，这个程序也能返回正确的结果
+    int w = sizeof(unsigned);
+    int mask = (1 << n) - 1;
+    return  (x >> n) | ((x & mask) << (w * 8 - n));
+}
 
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
@@ -493,8 +500,10 @@ int main(int argc, char* argv[])
     assert(lower_bits(0x78abcdef, 16) == 0xcdef);
     assert(lower_bits(0x78abcdef, 32) == 0x78abcdef);
     assert(lower_bits(0x78abcdef, 1) == 1);
-
-
+    assert(rotate_right(0x12345678, 4) == 0x81234567);
+    assert(rotate_right(0x12345678, 20) == 0x45678123);
+    assert(rotate_right(0x12345678, 0) == 0x12345678);
+   
     getchar();
 
 }

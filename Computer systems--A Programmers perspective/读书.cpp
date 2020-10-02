@@ -272,7 +272,7 @@ int any_even_one(unsigned x)
 
 int even_ones(unsigned x)
 {
-    // problem 2.65
+    // problem 2.65。 这个题，我花了一整天，才突然想出来怎么解。
     unsigned result = (x >> 8) ^ x;
     result = (x >> 16) ^ result;
     result = (x >> 24) ^ result;
@@ -283,6 +283,17 @@ int even_ones(unsigned x)
 
     result = (result >> 1) ^ result;
     return  !(result & 0x1);
+}
+
+int leftmost_one(unsigned x)
+{
+    // problem 2.66。 这个题目真的折磨人，我看了hint但是依然没有任何思路。冥思苦想了好几个小时也没搞定。 最后是到网上查答案，看了下头几行程序，才明白的。 哎，真费劲啊。
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    return (x >> 1) + 1;
 }
 
 unsigned put_byte(unsigned x, unsigned char b, int i)
@@ -436,6 +447,9 @@ int main(int argc, char* argv[])
     assert(srl(0xff000000, 2) == (0xff000000u >> 2));
     assert(even_ones(0x01041040) == 1);
     assert(even_ones(0x01041014) == 0);
+
+    assert(leftmost_one(0xff00) == 0x8000);
+    assert(leftmost_one(0x6600) == 0x4000);
     getchar();
 
 }

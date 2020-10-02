@@ -339,6 +339,17 @@ unsigned rotate_right(unsigned x, int n)
     return  (x >> n) | ((x & mask) << (w * 8 - n));
 }
 
+int fits_bits(int x, int n)
+{
+    // prob 2.70 ： 先求出 n位 有效位的int的上下界，然后再去考察 x 是否在上下界之间。 由于不能使用比较运算符，所以就需要从 bit patter的特点来判断。 
+    int upperBound = (1 << (n - 1)) - 1;
+    int lowerBound =  0 - (1 << (n - 1));
+    int result = ((~upperBound & x) == 0 || (lowerBound ^ (x & lowerBound)) == 0); // 若x是非负数，则 第n 到 第w位都是0； 若x是负数，则第n 到 第w位都是1
+    return result; 
+}
+
+
+
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
     // problem 2.60
@@ -503,7 +514,7 @@ int main(int argc, char* argv[])
     assert(rotate_right(0x12345678, 4) == 0x81234567);
     assert(rotate_right(0x12345678, 20) == 0x45678123);
     assert(rotate_right(0x12345678, 0) == 0x12345678);
-   
+    assert(fits_bits(7, 4) && fits_bits(-8, 4) && !fits_bits(-9,4) && !fits_bits(8,4));
     getchar();
 
 }

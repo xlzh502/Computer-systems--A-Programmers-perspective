@@ -358,6 +358,26 @@ int xbyte(packed_t word, int bytenum)
     return result;
 }
 
+void copy_int(int val, void *buf, int maxbytes)
+{
+#define 这样写依然是错误的 0
+
+#if (这样写依然是错误的)
+    if (maxbytes >= sizeof(val))   // 这样写依然是错误的。 令人惊讶的是： assert(-1<3U) 会触发异常。 两个不同的type作比较，首先是其中一个类型做转换 成为相同的type，原因是：只有同类型的东西才能做比较： -1会被提升成为unsigned，然后和3U比较，T2U(-1) 是UINT_MAX（T2U是书中的一个转换操作符），UINT_MAX一定大于3U。
+        memcpy(buf, (void*)&val, sizeof(val));
+#else
+
+    assert(-1 < 3U == false); // 一个令人惊讶的、令人发指的事实。。。。
+
+    if (maxbytes <= 0) // 必须把 <0的情况，单独列出来，否则 maxbytes>=sizeof(int) 在maxbytes是负数的时候，依然会是true
+        return;
+    else if (maxbytes >= sizeof(val))
+        memcpy(buf, (void*)&val, sizeof(val));
+
+#endif
+}
+
+
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
     // problem 2.60
@@ -526,6 +546,9 @@ int main(int argc, char* argv[])
     assert(xbyte(0x8012c123, 0) == 0x23);
     assert(xbyte(0x8012c123, 3) == -0x80);
     assert(xbyte(0x8012c123, 1) == -63);
+
+    char buf[4];
+    copy_int(i, buf, -4);
 
     getchar();
 

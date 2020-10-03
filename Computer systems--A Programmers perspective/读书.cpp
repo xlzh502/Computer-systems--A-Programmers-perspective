@@ -382,6 +382,27 @@ void copy_int(int val, void *buf, int maxbytes)
 }
 
 
+int saturating_add(int x, int y)
+{
+    // prob 2.73  : 这个题目，想了1整天，都没想明白怎么写。 受困于，如何不用if条件分支，就可以写出程序。 下面的这个算法，是从网上抄的。 惊人之笔，发生在mask生成，以及如何用mask，构造出最后的返回结果。
+    int w = sizeof(int)<<3;
+    int result = x + y;
+    int signBit1 = x & (1 << (w-1));
+    int signBit2 = y & (1 << (w-1));
+    int signBitResult = result & (1 << (w-1));
+    
+    int positiveOverflow = !signBit1 && !signBit2 && signBitResult;  // 两正数，相加，得出负数
+    int negativeOverflow = signBit1 && signBit2 && !signBitResult;  // 两负数，相加，得出正数
+    int overflow = positiveOverflow || negativeOverflow;
+
+    int mask = overflow << (w  - 1);
+    mask = mask >> (w - 1);  // overflow的时候，mask等于全1； 否则为0
+    
+    result = (result & ~mask) + ((INT_MAX + negativeOverflow) & mask);
+    return result;
+}
+
+
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
     // problem 2.60
@@ -553,6 +574,11 @@ int main(int argc, char* argv[])
 
     char buf[4];
     copy_int(i, buf, -4);
+
+    assert(saturating_add(1, 3) == 4);
+    assert(saturating_add(INT_MAX, 4) == INT_MAX);
+    assert(saturating_add(INT_MIN, -4) == INT_MIN);
+
 
     getchar();
 

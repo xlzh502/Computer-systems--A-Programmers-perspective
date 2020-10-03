@@ -402,6 +402,22 @@ int saturating_add(int x, int y)
     return result;
 }
 
+int tsub_ovs(int x, int y)
+{
+        // prob 2.74  :  需要把y == INT_MIN的情况，单独出来。 当y==INT_MIN时，-y依然是INT_MIN(参考教材的2.3.3节)。因此，无法按照 “负-正 == 正”、“正-负=负”这样的溢出情况来进行了。
+
+    int w = sizeof(int) << 3;
+
+    int result = x - y;
+
+    int signBitx = (x & (1 << (w - 1)));
+    int signBity =  (y & (1 << (w - 1)));
+    int signBitResult =  (result & (1 << (w - 1)));
+                                                   
+    return (signBitx && !signBity && !signBitResult) ||   //  负数 - 正数 == 正数
+              (!signBitx && signBity && !signBitResult) ||    //  正数 - 负数 == 负数
+              (signBitx && y == INT_MIN);                          //  y  == -y == INT_MIN，此时x只要是个负数，就会发生 负 + 负 == 正数的情况
+} 
 
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
@@ -578,6 +594,9 @@ int main(int argc, char* argv[])
     assert(saturating_add(1, 3) == 4);
     assert(saturating_add(INT_MAX, 4) == INT_MAX);
     assert(saturating_add(INT_MIN, -4) == INT_MIN);
+    assert(tsub_ovs(-1,INT_MIN) == 1);
+    assert(tsub_ovs(-2,INT_MAX) == 1);
+    assert(tsub_ovs(INT_MAX, INT_MIN) == 0);
 
 
     getchar();

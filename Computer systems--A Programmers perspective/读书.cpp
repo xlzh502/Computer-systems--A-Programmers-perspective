@@ -420,7 +420,7 @@ int tsub_ovs(int x, int y)
 } 
 
 unsigned unsigned_high_prod(unsigned x, unsigned y)
-{
+{  // 这里，暂且返回这个数；无需实现。
     return UINT_MAX;
 }
 int signed_high_prod(int x, int y)
@@ -435,6 +435,17 @@ int signed_high_prod(int x, int y)
     int y_bit_0 = y & 0x1; // y的 第0 位:  Y0
     return unsigned_high_prod(x, y) - ((unsigned)y - y_bit_0 - (y_bit_w_1 << (w - 1)))  & x_bit_w_1_mask
         - ((unsigned)x - x_bit_0 - (x_bit_w_1 << (w - 1))) & y_bit_w_1_mask;   // 这个式子，写出来的时候，需要舍弃掉 2*2^(w-1) = 2^w， 因为，乘积的高32位，起始阶数，就是2^w，我们只需要调整 系数，舍弃阶数。
+}
+
+int divide_power2(int x, int k)
+{
+    // prob 2.77   若 x < 0, 则返回 (x + bias)>>k,  其中，bias == (signBit << k) - 1;  若 x >=0， 则返回 x >> k
+    int w = sizeof(int) << 3;
+    int signMask = x >> (w - 1); // 若是负数，则各个位都是1；否则，各个位都是0 
+    int bias = ((1 << k) - 1)  & signMask;
+
+    return  (x + bias) >> k;
+
 }
 
 unsigned put_byte(unsigned x, unsigned char b, int i)
@@ -616,7 +627,9 @@ int main(int argc, char* argv[])
     assert(tsub_ovs(-2,INT_MAX) == 1);
     assert(tsub_ovs(INT_MAX, INT_MIN) == 0);
 
-
+    assert(divide_power2(5, 1)==2);
+    assert(divide_power2(-5, 1) == -2);
+  
     getchar();
 
 }

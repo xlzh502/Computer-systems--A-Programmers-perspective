@@ -497,6 +497,27 @@ int fiveeighths(int x)
 #endif
 }
 
+int prob_2_80(int m, int n, char func)
+{
+    // Prob 2.80  
+    switch (func)
+    {
+    case 'A':
+    {
+        int result = 1; 
+        result = (1 << n) - 1;
+        return ~result;
+    }
+    case 'B':
+    {
+        int result = 1;
+        result = 1 << (m+n);
+        result -= (1 << m);
+        return result;
+    }
+    }
+}
+
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
     // problem 2.60
@@ -699,7 +720,8 @@ int main(int argc, char* argv[])
     assert(fiveeighths(13) == 8);
     assert(fiveeighths(-13) == -8);
 
-
+    assert(prob_2_80(5, 7, 'A') == ~((1 << 7) - 1));
+    assert(prob_2_80(5, 7, 'B') == (1<<(5+7)) - (1 << 5));  // 用到了 P128 Form A 和 Form B
     
     getchar();
 

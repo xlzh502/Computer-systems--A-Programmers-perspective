@@ -448,6 +448,32 @@ int divide_power2(int x, int k)
 
 }
 
+int mul5div8(int x)
+{
+    // prob 2.78
+    int w = sizeof(int) << 3;
+
+    int result = (x << 2); // x*5,  可能发生溢出:  也就是说， x<<2可能溢出； 或者 x<<2没有溢出，但是 y+x 出现溢出(y==x<<2)。
+
+    int resultSignBit = result & (1 << (w - 1));
+    int xSignBit = x & (1 << (w - 1));
+    int overflow = resultSignBit ^ xSignBit;
+    if (overflow)
+        throw(std::exception("overflow in  x<<2 "));
+
+    int operand1SignBit = result & (1 << (w - 1));
+
+    result += x;
+    resultSignBit = result & (1 << (w - 1));
+    xSignBit = x & (1 << (w - 1));
+    overflow = (operand1SignBit && xSignBit && !resultSignBit) || (!operand1SignBit && !xSignBit && resultSignBit);
+    if (overflow)
+        throw(std::exception("overflow in y+x"));
+
+
+    return divide_power2(result, 3);
+}
+
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
     // problem 2.60
@@ -630,6 +656,24 @@ int main(int argc, char* argv[])
     assert(divide_power2(5, 1)==2);
     assert(divide_power2(-5, 1) == -2);
   
+    assert(mul5div8(5) == 3);
+    assert(mul5div8(-5) == -3);
+    try {
+        mul5div8(INT_MAX);
+    }
+    catch (std::exception e)
+    {
+        std::cout << e.what() << "\n";
+    }
+    try {
+        mul5div8(INT_MAX/5 + 2);
+    }
+    catch (std::exception e)
+    {
+        std::cout << e.what() << "\n";
+    }
+    
+    
     getchar();
 
 }

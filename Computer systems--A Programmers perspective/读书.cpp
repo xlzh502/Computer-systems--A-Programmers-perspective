@@ -470,8 +470,31 @@ int mul5div8(int x)
     if (overflow)
         throw(std::exception("overflow in y+x"));
 
-
     return divide_power2(result, 3);
+}
+
+int fiveeighths(int x)
+{
+    // prob 2.79 :  为了不发生溢出（实际上，也确实不应该溢出，因为x的八分支5，肯定绝对值小于x，所以不会溢出），所以需要先做除法，再做乘法；否则，计算的过程中就可能发生溢出。
+#if (精度会发生损失)
+    int result = divide_power2(x, 3);  // 此处 会发生精度丢失， 因为，小数部分 再乘以5，有可能出现新的整数部分。 譬如，如果小数部分大于0.2， 乘5后会大于1. （0.2 * 5 == 1）
+    result <<= 2;
+    result += result;
+    return result;
+#else
+    // 先将 x 分解成 8*Shang+ YuShu 的形式， 其中  0<= YuShu < 8.    Shang == 商， YuShu==余数。 商数 是向下取整，而不再是向0取整， 因此Shang恰好就等于 x >> 3 （当x是负数的时候 也是如此）
+    int w = sizeof(int) << 3;
+    int Shang = x >> 3;
+    int YuShu = x - (Shang << 3);
+
+    int bias = ((1 << 3) - 1) & (x >> (w - 1)); // 负数时 非0。 如果不加bias，那么负数的时候，就是round-down， 而不是round-toward-zero。 但是题目要求，必须是"rounded toward zero"
+
+
+    // 5/8  * x ==  5/8 * (8*Shang+YuShu) == 5*Shang + 5*YuShu / 8,  且   0<= YuShu < 8
+    int result = (Shang << 2) + Shang + (((YuShu << 2) + YuShu + bias) >> 3);
+    return result;
+
+#endif
 }
 
 unsigned put_byte(unsigned x, unsigned char b, int i)
@@ -672,7 +695,11 @@ int main(int argc, char* argv[])
     {
         std::cout << e.what() << "\n";
     }
-    
+    assert(fiveeighths(16) == 10);
+    assert(fiveeighths(13) == 8);
+    assert(fiveeighths(-13) == -8);
+
+
     
     getchar();
 

@@ -427,12 +427,12 @@ int signed_high_prod(int x, int y)
 {
     // Prob 2.75    解这道题，先要进行下公式推导。 x = (Xw-1Xw-2...X0),  y = (Yw-1Yw-2...Y0)),   B2T(x*y) 需要列出展开式的各个项（根据二进制补码的定义）；然后，再分析B2T(x*y)与B2U(x*y)   之间的差异。
     int w = sizeof(int) << 3;
-    int x_bit_w_1 = (x >> (w - 1)) & 0x1;  // x的 w-1 位
-    int y_bit_w_1 = (y >> (w - 1)) & 0x1;  // y的 w-1 位
+    int x_bit_w_1 = (x >> (w - 1)) & 0x1;  // x的 w-1 位 ： Xw-1
+    int y_bit_w_1 = (y >> (w - 1)) & 0x1;  // y的 w-1 位 :   Yw-1
     int x_bit_w_1_mask = (x >> (w - 1));  // 若 x的w-1位是1， 则全1；否则为0
     int  y_bit_w_1_mask = (y >> (w - 1)); // 若 y的w-1位是1， 则全1；否则为0
-    int x_bit_0 = x & 0x1;
-    int y_bit_0 = y & 0x1;
+    int x_bit_0 = x & 0x1; // x的 第0 位:  X0
+    int y_bit_0 = y & 0x1; // y的 第0 位:  Y0
     return unsigned_high_prod(x, y) - ((unsigned)y - y_bit_0 - (y_bit_w_1 << (w - 1)))  & x_bit_w_1_mask
         - ((unsigned)x - x_bit_0 - (x_bit_w_1 << (w - 1))) & y_bit_w_1_mask;   // 这个式子，写出来的时候，需要舍弃掉 2*2^(w-1) = 2^w， 因为，乘积的高32位，起始阶数，就是2^w，我们只需要调整 系数，舍弃阶数。
 }

@@ -172,6 +172,22 @@ int float_ge(float x, float y)
         (sx && sy && ux <= uy);
 }
 
+int float_ge_2(float x, float y)
+{
+    // problem 2.83:  做习题的时候，又做了一遍。
+    unsigned ux = f2u(&x);
+    unsigned uy = f2u(&y);
+    unsigned sx = ux >> 31;
+    unsigned sy = uy >> 31;
+
+    return  (!sx && sx != 0 && sy) ||   // x>0， y <=0
+        (sx && sy && ux <= uy) ||  // x <=0,   y<=0,  且 |x| <= |y|
+        (sx && ((ux << 1) == 0) && uy == 0) ||  // x = -0.0,  y = 0.0
+        (!sx && !sy && ux >= uy) ||    // x >=0 ,  y>=0, 且 x >= y
+        (!sx && ux == 0 && !sy); //  x==0,  y <=0
+
+}
+
 void  prob_2_54()
 {
     // P151   Practice problem 2.54
@@ -519,6 +535,8 @@ int prob_2_80(int m, int n, char func)
     }
 }
 
+
+
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
     // problem 2.60
@@ -724,6 +742,11 @@ int main(int argc, char* argv[])
     assert(prob_2_80(5, 7, 'A') == ~((1 << 7) - 1));
     assert(prob_2_80(5, 7, 'B') == (1<<(5+7)) - (1 << 5));  // 用到了 P128 Form A 和 Form B
     
+    
+    assert(float_ge_2(-0.0, 0.0)==1);
+    assert(float_ge_2(4.0, 3.0) == 1);
+    assert(float_ge_2(-3.0, -4.0) == 1);
+    assert(float_ge_2(4.0, 3.0) == 1);
 
     getchar();
 

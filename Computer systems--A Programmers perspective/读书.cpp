@@ -414,9 +414,9 @@ int tsub_ovs(int x, int y)
     int signBity =  (y & (1 << (w - 1)));
     int signBitResult =  (result & (1 << (w - 1)));
                                                    
-    return (signBitx && !signBity && !signBitResult) ||   //  负数 - 正数 == 正数
-              (!signBitx && signBity && !signBitResult) ||    //  正数 - 负数 == 负数
-              (signBitx && y == INT_MIN);                          //  y  == -y == INT_MIN，此时x只要是个负数，就会发生 负 + 负 == 正数的情况
+    return !(signBitx  && y == INT_MIN) || // 负数 - INT_MIN == 正数（或者0） 不算溢出。原因可以参考P121 Practice problem 2.32的解答。   一个错误的看法是：因为 y  == -y == INT_MIN，导致 x- INT_MIN == x + INT_MIN，因此，就可以按照 判断 x+y 是否溢出的原则，推出“ 此时x只要是个负数，就会发生 负 + 负 == 正数， 从而溢出 ”。 正确的结论是： 负数 - INT_MIN == 正数， 对于 x-y这样的数学表达式来说，合情合理， 因此不溢出。而 正数 - INT_MIN == 负数， 对于x-y表达式来说，数学上讲，才是溢出的。虽然-INT_MIN==INT_MIN，导致 正数 - INT_MIN == 正数 + INT_MIN == 负数 ，如果按照 x+y 判断是否溢出的原则，正数 + 负数 == 负数 不算溢出。 
+        (signBitx && !signBity && !signBitResult) ||   //  负数 - 正数 == 正数
+        (!signBitx && signBity && signBitResult);    //  正数 - 负数 == 负数。 包含了 y == INT_MIN， 正数-INT_MIN==负数的情况。 
 } 
 
 unsigned unsigned_high_prod(unsigned x, unsigned y)
@@ -450,7 +450,7 @@ int divide_power2(int x, int k)
 
 int mul5div8(int x)
 {
-    // prob 2.78
+    // prob 2.78 ： 这个题目，和2.79比较，都是乘5除8，但是本题，就允许产生溢出。 而2.79，既不允许溢出，又不允许精度损失。
     int w = sizeof(int) << 3;
 
     int result = (x << 2); // x*5,  可能发生溢出:  也就是说， x<<2可能溢出； 或者 x<<2没有溢出，但是 y+x 出现溢出(y==x<<2)。
@@ -475,7 +475,8 @@ int mul5div8(int x)
 
 int fiveeighths(int x)
 {
-    // prob 2.79 :  为了不发生溢出（实际上，也确实不应该溢出，因为x的八分支5，肯定绝对值小于x，所以不会溢出），所以需要先做除法，再做乘法；否则，计算的过程中就可能发生溢出。
+    // prob 2.79 :  为了不发生溢出（实际上，也确实不应该溢出，因为x的八分之5，肯定绝对值小于x，所以不会溢出），所以需要先做除法，再做乘法；否则，计算的过程中就可能发生溢出。
+    // 这个题目需要考虑3各方面： （1）如何避免 乘5 的溢出（这个溢出不可以接受，因为x乘八分之五，本来就不该溢出） (2) 如何避免 只接用 x除以8 产生的精度损失 （3）如何处理rounded toward zero
 #if (精度会发生损失)
     int result = divide_power2(x, 3);  // 此处 会发生精度丢失， 因为，小数部分 再乘以5，有可能出现新的整数部分。 譬如，如果小数部分大于0.2， 乘5后会大于1. （0.2 * 5 == 1）
     result <<= 2;
@@ -693,9 +694,9 @@ int main(int argc, char* argv[])
     assert(saturating_add(1, 3) == 4);
     assert(saturating_add(INT_MAX, 4) == INT_MAX);
     assert(saturating_add(INT_MIN, -4) == INT_MIN);
-    assert(tsub_ovs(-1,INT_MIN) == 1);
+    assert(tsub_ovs(-1,INT_MIN) == 0);
     assert(tsub_ovs(-2,INT_MAX) == 1);
-    assert(tsub_ovs(INT_MAX, INT_MIN) == 0);
+    assert(tsub_ovs(INT_MAX, INT_MIN) == 1);
 
     assert(divide_power2(5, 1)==2);
     assert(divide_power2(-5, 1) == -2);
@@ -723,6 +724,7 @@ int main(int argc, char* argv[])
     assert(prob_2_80(5, 7, 'A') == ~((1 << 7) - 1));
     assert(prob_2_80(5, 7, 'B') == (1<<(5+7)) - (1 << 5));  // 用到了 P128 Form A 和 Form B
     
+
     getchar();
 
 }

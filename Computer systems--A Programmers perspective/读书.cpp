@@ -150,6 +150,11 @@ int div16(int x)
     return (x - diff) >> 4;
 }
 
+float u2f(unsigned *ux)
+{
+    return *((float*)ux);
+}
+
 unsigned f2u(float* x)
 {
     // Problem 2.83
@@ -535,7 +540,243 @@ int prob_2_80(int m, int n, char func)
     }
 }
 
+typedef unsigned float_bits;
+float_bits float_absval(float_bits f)
+{
+    // prob 2.91
+    unsigned sign = f & (1 << 31);
+    int exponent = (f << 1) >> 24; // 抹去符号位，再看高8位
+    unsigned fraction = f & ((1 << 23) - 1);
 
+    if (exponent == 0xff && fraction != 0)  // NaN
+        return f;
+    else
+        return (exponent << 23) | fraction;
+}
+
+float_bits float_negate(float_bits f)
+{
+    // prob 2.92
+    unsigned sign = f & (1 << 31);
+    int exponent = (f << 1) >> 24; // 抹去符号位，再看高8位
+    unsigned fraction = f & ((1 << 23) - 1);
+
+    if (exponent == 0xff && fraction != 0)  // NaN
+        return f;
+
+    sign = (~sign) & (1 << 31); // 符号位取反
+    return sign |  (exponent << 23) | fraction;
+
+}
+
+float_bits float_half(float_bits f)
+{
+    // prob 2.93
+    unsigned sign = f & (1 << 31);
+    unsigned exponent = (f << 1) >> 24; // 抹去符号位，再看高8位
+    unsigned fraction = f & ((1 << 23) - 1);
+
+    int bias = (2 << 7) - 1;
+    int minimalExponent = 1 - bias;
+
+    if (exponent == 0xff)  // NaN ， +∞或-∞
+        return f;
+
+    if (exponent == 0) // denormalized :  由于 指数 无法再减小，所以 *0.5 就只能把 小数部分右移1位。 
+    {
+            //  需要考虑rounded-toward-even
+        unsigned low2bits = fraction & 0x3;
+        fraction >>= 1;
+        if ((low2bits & 0x3) == 0x3)  // 3 / 2 == 1.5 --> 2 (rounded toward even)
+            fraction += 1;
+    }
+    else
+    { // normalized:   
+        if (exponent == 1)  // 当 exponent == 最小值的时候，需要降级为denormalized；
+        {
+            unsigned low2bits = fraction & 0x3;
+            if ((low2bits & 0x3) == 0x3)
+            {
+                if (fraction == (1 << 23) - 1)
+                {
+                    fraction = 0; // rounded toward even
+                }
+                else
+                {
+                    fraction >>= 1;
+                    fraction |= (1 << 22);  // 这个1，来自于 从 normalized 的 小数点左侧 那个隐含的 1
+                    fraction += 1;  // rounded toward even
+                    exponent = 0;
+                }
+            }
+            else
+            {
+                fraction >>= 1;
+                fraction |= (1 << 22);  // 这个1，来自于 从 normalized 的 小数点左侧 那个隐含的 1
+                exponent = 0;
+            }
+        }
+        else
+            exponent--; // exponent > 最小值，只需要exponent减1
+    }
+
+    return sign | (exponent << 23) | fraction;
+}
+
+float_bits float_twice(float_bits f)
+{
+    // prob 2.94
+    unsigned sign = f & (1 << 31);
+    unsigned exponent = (f << 1) >> 24;
+    unsigned fraction = f & ((1 << 23) - 1);
+
+    if (exponent = 0xff) // NaN， +∞或-∞
+        return f;
+
+    unsigned bias = (1 << 7) - 1;
+    if (exponent == 0) // denormalized
+    {
+        unsigned bitAfterPoint = fraction & (1 << 22); // 小数点 右侧的第1位，如果为1， 那么 乘2，就可以用normaized格式了； 如果为0，则继续是denormalized格式
+        if (bitAfterPoint)
+        {
+            // 将denormalized 转为normalized
+            exponent = bias + 1;
+            fraction <<= 1;
+            fraction &= ((1 << 23) - 1);
+        }
+        else
+        {
+            fraction <<= 1;
+        }
+    }
+    else
+    {
+        // Normalized:  如果 exponent是最大值，那么 乘2，将导致 溢出，返回 +∞ 或 -∞
+        if (exponent == 0xfe)
+        {
+            exponent = 0xff;
+            fraction = 0;
+        }
+        else
+            exponent++;
+    }
+    return sign | (exponent << 23) | fraction;
+}
+
+float_bits float_i2f(int i)
+{
+    // prob 2.95
+    if (i == 0)
+        return 0;
+
+    unsigned exponent = 0;
+    while (i != 1 || i != -1)
+    {
+        i <<= 1;
+        exponent++;
+    }
+    
+    unsigned bias = (1 << 7) - 1;
+    unsigned sign = i & (1 << 31);
+    unsigned fraction = (sign) ? (-i) : i;
+
+    if (exponent > 23)
+    {
+        // 如果指数>23，则正数可以表示为 2^(exponent) * (1.XXXXXXXX XXXXXXXX XXXXXXXY YYYYYYY) ， 由于右侧的9个Y无法被 23位fraction容下，所以需要考虑rounding
+        unsigned bitsAfter23th = fraction & ((1 << (exponent - 23 + 1)) - 1);  // 求出 Y YYYYYYY
+        if (bitsAfter23th > (1 << (exponent - 23))) // rounded-up
+        {
+            if (fraction ^ ((1 << 23) - 1) == 0)  // .XXXXXXXX XXXXXXXX XXXXXXX 全部都是1
+            {
+                // fraction加1，会导致 指数增1，但是指数如果已经是最大值，那么就溢出，从而返回+∞或-∞
+                if (exponent == (0xfe - bias))
+                {
+                    fraction = 0;
+                    exponent = 0xff;
+                }
+                else
+                {
+                    fraction = 0;
+                    exponent++;
+                    exponent += bias;
+                }
+            }
+            else
+            {
+                fraction++;
+                fraction &= ((1 << 23) - 1);
+            }
+        }
+        else if (bitsAfter23th < (1 << (exponent - 23))) // rounded-down
+        {
+            fraction &= ((1 << 23) - 1);
+            exponent += bias;
+        }
+        else // round-toward-even
+        {
+            if (fraction ^ ((1 << 23) - 1) == 0)  // .XXXXXXXX XXXXXXXX XXXXXXX 全部都是1
+            {
+                // fraction加1，会导致 指数增1，但是指数如果已经是最大值，那么就溢出，从而返回+∞或-∞
+                if (exponent == (0xfe - bias))
+                {
+                    fraction = 0;
+                    exponent = 0xff;
+                }
+                else
+                {
+                    fraction = 0;
+                    exponent++;
+                    exponent += bias;
+                }
+            }
+            else
+            {
+                fraction++;
+                fraction &= ((1 << 23) - 1);
+            }
+        }
+    }
+    else
+    {
+        fraction = (i - (1 << exponent)) << (23 - exponent);
+        exponent += bias;
+    }
+
+    return sign | (exponent << 23) | fraction;
+}
+
+int float_f2i(float_bits f)
+{
+    // prob 2.96 : 题目要求，做round toward zero
+    unsigned sign = f & (1 << 31);
+    unsigned exponent = (f << 1) >> 24;
+    unsigned fraction = f & ((1 << 23) - 1);
+
+    unsigned bias = (1 << 7) - 1;
+
+    if (exponent == 0xff) // +∞,  -∞ 或者 NaN
+        return 0x80000000;
+
+    if (exponent == 0) // denormalized
+        return 0; // round toward zero
+
+                                              /* exp,  fraction*/
+    unsigned upperLimit[2] = { 29,  (1 << 30) - 1 };   // 对应着INT_MAX的指数、小数
+    unsigned lowerLimit[2] = { 31, 0 }; // 对应着INT_MIN的指数、小数
+    
+    int exp = exponent - bias; // 这个是exponent的真实数值
+    if (!sign && (exp > upperLimit[0] || exp == upperLimit[0] && fraction > upperLimit[1]))  // x > INT_MAX
+        return 0x80000000;
+    if (sign && (exp > lowerLimit[0] || exp == lowerLimit[0] && fraction > lowerLimit[0]))  // x < INT_MIN
+        return 0x80000000;
+    if (exp < 0) //  |x| 比1小
+        return 0;
+
+
+    int result = (fraction >> (23 - exp)) + (1 << exp);
+    return sign ? -result : result;
+
+}
 
 unsigned put_byte(unsigned x, unsigned char b, int i)
 {
@@ -747,6 +988,62 @@ int main(int argc, char* argv[])
     assert(float_ge_2(4.0, 3.0) == 1);
     assert(float_ge_2(-3.0, -4.0) == 1);
     assert(float_ge_2(4.0, 3.0) == 1);
+    
+
+    for (unsigned sign = 0; sign <=1; sign++)
+        for (unsigned exp = 0; exp <=0xff; exp++)
+            for (unsigned fraction = 0; fraction <= 0xf; fraction++)
+            {
+                unsigned ux = (sign << 31) | (exp << 23) | fraction;
+                float ref = std::fabsf(u2f(&ux));
+                assert(float_absval(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+
+                ux = (sign << 31) | (exp << 23) | ((1 << 24) - 1 - fraction);
+                ref = std::fabsf(u2f(&ux));
+                assert(float_absval(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+            }
+
+
+    std::cout << "finish float_absval" << std::endl;
+
+    for (unsigned sign = 0; sign <=1; sign++)
+        for (unsigned exp = 0; exp <=0xff; exp++)
+            for (unsigned fraction = 0; fraction <= 0xf; fraction++)
+            {
+                unsigned ux = (sign << 31) | (exp << 23) | fraction;
+                float ref = -u2f(&ux);
+                assert(float_negate(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+                ux = (sign << 31) | (exp << 23) | ((1 << 24) - 1 - fraction);
+                ref = -u2f(&ux);
+                assert(float_negate(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+             }
+    std::cout << "finish float_negate" << std::endl;
+
+    for (unsigned sign = 0; sign <=1; sign++)
+        for (unsigned exp = 0; exp <=0xff; exp++)
+            for (unsigned fraction = 0; fraction <= 0xf; fraction++)
+            {
+                unsigned ux = (sign << 31) | (exp << 23) | fraction;
+                float ref = 0.5*u2f(&ux);
+                assert(float_half(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+                ux = (sign << 31) | (exp << 23) | ((1 << 24) - 1 - fraction);
+                ref = 0.5*u2f(&ux);
+                assert(float_half(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+             }
+
+    std::cout << "finish float_half" << std::endl;
+    
+    for (unsigned i = 0; i <= UINT_MAX; i++)
+    {
+        assert(float_twice(i) == 2*u2f(&i));
+    }
+    std::cout << "finish float_twice" << std::endl;
+
+    for (int i = INT_MIN; i <= INT_MAX; i++)
+    {
+        assert(float_i2f(i) == (float)i);
+    }
+    std::cout << "finish float_i2f" << std::endl;
 
     getchar();
 

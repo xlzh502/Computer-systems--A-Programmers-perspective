@@ -630,17 +630,16 @@ float_bits float_twice(float_bits f)
     unsigned exponent = (f << 1) >> 24;
     unsigned fraction = f & ((1 << 23) - 1);
 
-    if (exponent = 0xff) // NaN， +∞或-∞
+    if (exponent == 0xff) // NaN， +∞或-∞
         return f;
 
-    unsigned bias = (1 << 7) - 1;
     if (exponent == 0) // denormalized
     {
         unsigned bitAfterPoint = fraction & (1 << 22); // 小数点 右侧的第1位，如果为1， 那么 乘2，就可以用normaized格式了； 如果为0，则继续是denormalized格式
         if (bitAfterPoint)
         {
             // 将denormalized 转为normalized
-            exponent = bias + 1;
+            exponent = 1;
             fraction <<= 1;
             fraction &= ((1 << 23) - 1);
         }
@@ -799,12 +798,12 @@ int main(int argc, char* argv[])
     assert(i == 98765 && j == 12345);   // P85  Practice problem 2.10
 
     /*
-   P89  Aside  C++编译器处理的逻辑 和 C编译器不太一样。 
+   P89  Aside  C++编译器处理的逻辑 和 C编译器不太一样。
     int k = 0xfedcba98 << 32;
     assert(0xfedcba98 << 32 == 0xfedcba98);
     assert(0xfedcba98 >> 36 == 0xffedcba9);
     assert(0xfedcba98U >> 40 == 0x00fedcba); */
-    
+
     assert(1 << 2 + 3 << 4 == 1 << (2 + 3) << 4); // P90  Aside 运算符优先级的陷阱
 
 
@@ -815,7 +814,7 @@ int main(int argc, char* argv[])
     assert(show_bytes((byte_pointer)&v, sizeof(short)) == show_bytes((byte_pointer)&uv, sizeof(unsigned short)));
 
     int m = -1;
-    unsigned int n = UINT_MAX + m+1;  // P101:   公式（2.5）  给出一个负数（有符号数，且负数），求与它具有相同 位模式 的 无符号数。
+    unsigned int n = UINT_MAX + m + 1;  // P101:   公式（2.5）  给出一个负数（有符号数，且负数），求与它具有相同 位模式 的 无符号数。
     assert(show_bytes((byte_pointer)&m, sizeof(int)) == show_bytes((byte_pointer)&n, sizeof(unsigned int)));
 
     // P105:  Figure 2.18   几个违反常理的情况
@@ -829,7 +828,7 @@ int main(int argc, char* argv[])
     if (sizeof(char*) == 8)
     {
         // 64位机器
-        
+
         assert(is_unsignedlong(-2147483648) == true);
         assert(is_int(-0x7FFFFFFF - 1) == true);
         if (sizeof(long) == 4)
@@ -847,11 +846,11 @@ int main(int argc, char* argv[])
     }
     else if (sizeof(char*) == 4)
     {
-         // 32位机器
+        // 32位机器
         assert(sizeof(long) == 4 && sizeof(long long) == 8);   // Visual C++ 2013是这样的。 不清楚GCC是怎样的。
         assert(is_unsigned(-2147483648) == true);
         assert(is_int(INT_MIN) == true);
-       
+
         assert(is_unsignedlonglong(-9223372036854775808));   // 验证： DATA:TMIN 文档中， Practice  Problem4的表格。 遗憾的是，C++和C编译器，还是不一样的。
         assert(is_unsignedlonglong(0x8000000000000000));
     }
@@ -861,7 +860,7 @@ int main(int argc, char* argv[])
     }
     catch (...)
     {
-        std::cout<<"overflow exception happend"<<"\n";
+        std::cout << "overflow exception happend" << "\n";
     }
 
     try {
@@ -871,7 +870,7 @@ int main(int argc, char* argv[])
     {
         std::cout << e.what() << "\n";
     }
-    
+
     try {
         tadd_ok(-INT_MAX, -3); // P120,  Practice Problem 2.30
     }
@@ -910,22 +909,22 @@ int main(int argc, char* argv[])
 
     assert(div16(-33) == -2 && div16(33) == 2);
 
-    assert(float_ge(-0.0, 0.0)==1);
+    assert(float_ge(-0.0, 0.0) == 1);
     assert(float_ge(4.0, 3.0) == 1);
     assert(float_ge(-3.0, -4.0) == 1);
     assert(float_ge(4.0, 3.0) == 1);
 
     prob_2_54();
-    
+
     assert(prob_2_59(0x89abcdef, 0x76543210) == 0x89abcd10);
-    assert(put_byte(0x12345678,0xab,2) == 0x12ab5678);
-    assert(put_byte(0x12345678,0xab,0) == 0x123456ab);
-    
-    std::cout <<"this machine is " << (is_big_endian() ? "big-endian" : "small-endian")<<std::endl;
+    assert(put_byte(0x12345678, 0xab, 2) == 0x12ab5678);
+    assert(put_byte(0x12345678, 0xab, 0) == 0x123456ab);
 
-    std::cout << "int right-shift is " << (!int_shifts_are_logical() ? " NOT " : "" )<< "logical" << std::endl;
+    std::cout << "this machine is " << (is_big_endian() ? "big-endian" : "small-endian") << std::endl;
 
-    assert(sra(0xff000000, 2) == ((-INT_MAX-1+0x7f000000) >> 2));
+    std::cout << "int right-shift is " << (!int_shifts_are_logical() ? " NOT " : "") << "logical" << std::endl;
+
+    assert(sra(0xff000000, 2) == ((-INT_MAX - 1 + 0x7f000000) >> 2));
     assert(srl(0xff000000, 2) == (0xff000000u >> 2));
     assert(even_ones(0x01041040) == 1);
     assert(even_ones(0x01041014) == 0);
@@ -942,7 +941,7 @@ int main(int argc, char* argv[])
     assert(rotate_right(0x12345678, 4) == 0x81234567);
     assert(rotate_right(0x12345678, 20) == 0x45678123);
     assert(rotate_right(0x12345678, 0) == 0x12345678);
-    assert(fits_bits(7, 4) && fits_bits(-8, 4) && !fits_bits(-9,4) && !fits_bits(8,4));
+    assert(fits_bits(7, 4) && fits_bits(-8, 4) && !fits_bits(-9, 4) && !fits_bits(8, 4));
     assert(xbyte(0x8012c123, 0) == 0x23);
     assert(xbyte(0x8012c123, 3) == -0x80);
     assert(xbyte(0x8012c123, 1) == -63);
@@ -953,13 +952,13 @@ int main(int argc, char* argv[])
     assert(saturating_add(1, 3) == 4);
     assert(saturating_add(INT_MAX, 4) == INT_MAX);
     assert(saturating_add(INT_MIN, -4) == INT_MIN);
-    assert(tsub_ovs(-1,INT_MIN) == 0);
-    assert(tsub_ovs(-2,INT_MAX) == 1);
+    assert(tsub_ovs(-1, INT_MIN) == 0);
+    assert(tsub_ovs(-2, INT_MAX) == 1);
     assert(tsub_ovs(INT_MAX, INT_MIN) == 1);
 
-    assert(divide_power2(5, 1)==2);
+    assert(divide_power2(5, 1) == 2);
     assert(divide_power2(-5, 1) == -2);
-  
+
     assert(mul5div8(5) == 3);
     assert(mul5div8(-5) == -3);
     try {
@@ -970,7 +969,7 @@ int main(int argc, char* argv[])
         std::cout << e.what() << "\n";
     }
     try {
-        mul5div8(INT_MAX/5 + 2);
+        mul5div8(INT_MAX / 5 + 2);
     }
     catch (std::exception e)
     {
@@ -981,17 +980,17 @@ int main(int argc, char* argv[])
     assert(fiveeighths(-13) == -8);
 
     assert(prob_2_80(5, 7, 'A') == ~((1 << 7) - 1));
-    assert(prob_2_80(5, 7, 'B') == (1<<(5+7)) - (1 << 5));  // 用到了 P128 Form A 和 Form B
-    
-    
-    assert(float_ge_2(-0.0, 0.0)==1);
+    assert(prob_2_80(5, 7, 'B') == (1 << (5 + 7)) - (1 << 5));  // 用到了 P128 Form A 和 Form B
+
+
+    assert(float_ge_2(-0.0, 0.0) == 1);
     assert(float_ge_2(4.0, 3.0) == 1);
     assert(float_ge_2(-3.0, -4.0) == 1);
     assert(float_ge_2(4.0, 3.0) == 1);
-    
 
-    for (unsigned sign = 0; sign <=1; sign++)
-        for (unsigned exp = 0; exp <=0xff; exp++)
+
+    for (unsigned sign = 0; sign <= 1; sign++)
+        for (unsigned exp = 0; exp <= 0xff; exp++)
             for (unsigned fraction = 0; fraction <= 0xf; fraction++)
             {
                 unsigned ux = (sign << 31) | (exp << 23) | fraction;
@@ -1006,8 +1005,8 @@ int main(int argc, char* argv[])
 
     std::cout << "finish float_absval" << std::endl;
 
-    for (unsigned sign = 0; sign <=1; sign++)
-        for (unsigned exp = 0; exp <=0xff; exp++)
+    for (unsigned sign = 0; sign <= 1; sign++)
+        for (unsigned exp = 0; exp <= 0xff; exp++)
             for (unsigned fraction = 0; fraction <= 0xf; fraction++)
             {
                 unsigned ux = (sign << 31) | (exp << 23) | fraction;
@@ -1016,11 +1015,11 @@ int main(int argc, char* argv[])
                 ux = (sign << 31) | (exp << 23) | ((1 << 24) - 1 - fraction);
                 ref = -u2f(&ux);
                 assert(float_negate(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
-             }
+            }
     std::cout << "finish float_negate" << std::endl;
 
-    for (unsigned sign = 0; sign <=1; sign++)
-        for (unsigned exp = 0; exp <=0xff; exp++)
+    for (unsigned sign = 0; sign <= 1; sign++)
+        for (unsigned exp = 0; exp <= 0xff; exp++)
             for (unsigned fraction = 0; fraction <= 0xf; fraction++)
             {
                 unsigned ux = (sign << 31) | (exp << 23) | fraction;
@@ -1029,14 +1028,22 @@ int main(int argc, char* argv[])
                 ux = (sign << 31) | (exp << 23) | ((1 << 24) - 1 - fraction);
                 ref = 0.5*u2f(&ux);
                 assert(float_half(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
-             }
+            }
 
     std::cout << "finish float_half" << std::endl;
-    
-    for (unsigned i = 0; i <= UINT_MAX; i++)
-    {
-        assert(float_twice(i) == 2*u2f(&i));
-    }
+
+    for (unsigned sign = 0; sign <= 1; sign++)
+        for (unsigned exp = 0; exp <= 0xff; exp++)
+            for (unsigned fraction = 0; fraction <= 0xf; fraction++)
+            {
+                unsigned ux = (sign << 31) | (exp << 23) | fraction;
+                float ref = 2 * u2f(&ux);
+                assert(float_twice(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+                ux = (sign << 31) | (exp << 23) | ((1 << 24) - 1 - fraction);
+                ref = 2 * u2f(&ux);
+                assert(float_twice(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+            }
+
     std::cout << "finish float_twice" << std::endl;
 
     for (int i = INT_MIN; i <= INT_MAX; i++)

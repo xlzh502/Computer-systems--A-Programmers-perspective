@@ -668,24 +668,29 @@ float_bits float_i2f(int i)
     if (i == 0)
         return 0;
 
-    unsigned exponent = 0;
-    while (i != 1 || i != -1)
-    {
-        i <<= 1;
-        exponent++;
-    }
-    
     unsigned bias = (1 << 7) - 1;
     unsigned sign = i & (1 << 31);
     unsigned fraction = (sign) ? (-i) : i;
+    unsigned temp = fraction;
+
+    unsigned exponent = 0;
+
+    while (temp != 1)
+    {
+        temp >>= 1;
+        exponent++;
+    }
+    
 
     if (exponent > 23)
     {
+        fraction &= ((1 << exponent) - 1); // 仅剩下 1.XXXXXXXX XXXXXXXX XXXXXXXY YYYYYYY 中的 XXXXXXXX XXXXXXXX XXXXXXXY YYYYYYY
         // 如果指数>23，则正数可以表示为 2^(exponent) * (1.XXXXXXXX XXXXXXXX XXXXXXXY YYYYYYY) ， 由于右侧的9个Y无法被 23位fraction容下，所以需要考虑rounding
-        unsigned bitsAfter23th = fraction & ((1 << (exponent - 23 + 1)) - 1);  // 求出 Y YYYYYYY
-        if (bitsAfter23th > (1 << (exponent - 23))) // rounded-up
+        unsigned bitsAfter23th = fraction & ((1 << (exponent - 23)) - 1);  // 求出 Y YYYYYYY
+        if (bitsAfter23th > (1 << (exponent - 23 -1))) // 正数是rounded-up （负数则是rounded-down）
         {
-            if (fraction ^ ((1 << 23) - 1) == 0)  // .XXXXXXXX XXXXXXXX XXXXXXX 全部都是1
+            fraction >>= (exponent - 23);  // 将 fraction 从  .XXXXXXXX XXXXXXXX XXXXXXX1 YYY 变为 .XXXXXXXX XXXXXXXX XXXXXXX
+            if ((fraction ^ ((1 << 23) - 1)) == 0)  // XXXXXXXX XXXXXXXX XXXXXXX 全部都是1
             {
                 // fraction加1，会导致 指数增1，但是指数如果已经是最大值，那么就溢出，从而返回+∞或-∞
                 if (exponent == (0xfe - bias))
@@ -703,17 +708,18 @@ float_bits float_i2f(int i)
             else
             {
                 fraction++;
-                fraction &= ((1 << 23) - 1);
+                exponent += bias;
             }
         }
-        else if (bitsAfter23th < (1 << (exponent - 23))) // rounded-down
+        else if (bitsAfter23th < (1 << (exponent - 23 - 1))) // rounded-down
         {
-            fraction &= ((1 << 23) - 1);
+            fraction >>= (exponent - 23);  // 将 fraction 从  .XXXXXXXX XXXXXXXX XXXXXXX0 YYY 变为 .XXXXXXXX XXXXXXXX XXXXXXX
             exponent += bias;
         }
         else // round-toward-even
         {
-            if (fraction ^ ((1 << 23) - 1) == 0)  // .XXXXXXXX XXXXXXXX XXXXXXX 全部都是1
+            fraction >>= (exponent - 23);  // 将 fraction 从  .XXXXXXXX XXXXXXXX XXXXXXX1 000 变为 .XXXXXXXX XXXXXXXX XXXXXXX
+            if ((fraction ^ ((1 << 23) - 1)) == 0)  // 若 .XXXXXXXX XXXXXXXX XXXXXXX  全部都是1
             {
                 // fraction加1，会导致 指数增1，但是指数如果已经是最大值，那么就溢出，从而返回+∞或-∞
                 if (exponent == (0xfe - bias))
@@ -730,14 +736,15 @@ float_bits float_i2f(int i)
             }
             else
             {
-                fraction++;
-                fraction &= ((1 << 23) - 1);
+                if ((fraction & 0x1) == 0x1)  // rounded toward even
+                    fraction++;
+                exponent += bias;
             }
         }
     }
     else
     {
-        fraction = (i - (1 << exponent)) << (23 - exponent);
+        fraction = (fraction - (1 << exponent)) << (23 - exponent); //// 假设exponent==15, 将 1.XXXXXXXX XXXXXXX 变成 XXXXXXXX XXXXXXX0 0000000
         exponent += bias;
     }
 
@@ -1046,10 +1053,18 @@ int main(int argc, char* argv[])
 
     std::cout << "finish float_twice" << std::endl;
 
-    for (int i = INT_MIN; i <= INT_MAX; i++)
-    {
-        assert(float_i2f(i) == (float)i);
-    }
+    for (unsigned sign = 0; sign <= 1; sign++)
+        for (unsigned exp = 0; exp <= 0xff; exp++)
+            for (unsigned fraction = 0; fraction <= 0xf; fraction++)
+            {
+                unsigned ux = (sign << 31) | (exp << 23) | fraction;
+                float ref =  (float)(int)ux;
+                assert(float_i2f(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+                ux = (sign << 31) | (exp << 23) | ((1 << 23) - 1 - fraction);
+                ref = (float)(int)ux;
+                assert(float_i2f(ux) == f2u(&ref) || isnan(u2f(&ux)) && isnan(ref));
+            }
+
     std::cout << "finish float_i2f" << std::endl;
 
     getchar();

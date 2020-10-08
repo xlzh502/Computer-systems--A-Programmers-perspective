@@ -766,21 +766,27 @@ int float_f2i(float_bits f)
     if (exponent == 0) // denormalized
         return 0; // round toward zero
 
-                                              /* exp,  fraction*/
-    unsigned upperLimit[2] = { 29,  (1 << 30) - 1 };   // 对应着INT_MAX的指数、小数
-    unsigned lowerLimit[2] = { 31, 0 }; // 对应着INT_MIN的指数、小数
+                                              /* exp,      fraction*/
+    unsigned upperLimit[2] = {   30,       (1 << 30) - 1};   // 对应着INT_MAX的指数、小数
+    unsigned lowerLimit[2] = {    31,       0 }; // 对应着INT_MIN的指数、小数
     
     int exp = exponent - bias; // 这个是exponent的真实数值
-    if (!sign && (exp > upperLimit[0] || exp == upperLimit[0] && fraction > upperLimit[1]))  // x > INT_MAX
-        return 0x80000000;
-    if (sign && (exp > lowerLimit[0] || exp == lowerLimit[0] && fraction > lowerLimit[0]))  // x < INT_MIN
-        return 0x80000000;
     if (exp < 0) //  |x| 比1小
         return 0;
+    if (!sign && exp > upperLimit[0])  // x > INT_MAX
+        return 0x80000000;
+    if (sign && (exp > lowerLimit[0] || exp == lowerLimit[0] && fraction > lowerLimit[1]))  // x < INT_MIN
+        return 0x80000000;
 
-
-    int result = (fraction >> (23 - exp)) + (1 << exp);
-    return sign ? -result : result;
+    if (exp >= 23)
+        return ((fraction << (exp - 23)) + (1 << exp)) * (sign ? -1 : 1);
+    else
+    {
+        // 假设，exp == 5,  则 f 可以表示为 1.XXXXXYYY YYYYYYYY YYY， 浮点转整型，全部应用round-toward-zero
+        unsigned bitsAfterPoint = fraction & ((1 << (23 - exp)) - 1); //  bitsAfterPoint是YYY YYYYYYYY YYY。 round-toward-zero 直接舍去 YYY YYYYYYYY YYY
+        fraction >>= (23 - exp);
+        return (fraction + (1 << exp)) * (sign ? -1 : 1);  
+    }
 
 }
 
@@ -1066,6 +1072,32 @@ int main(int argc, char* argv[])
             }
 
     std::cout << "finish float_i2f" << std::endl;
+
+        for (unsigned sign = 0; sign <= 1; sign++)
+        for (unsigned exp = 0; exp <= 0xff; exp++)
+            for (unsigned fraction = 0; fraction <= 0xf; fraction++)
+            {
+                unsigned ux = (sign << 31) | (exp << 23) | fraction;
+
+                int ref =  (int)u2f(&ux);
+
+                bool NaN_or_Overflow = false;
+                if (isnan(u2f(&ux)) || u2f(&ux) > INT_MAX || u2f(&ux) < INT_MIN)
+                    NaN_or_Overflow = true;
+                
+                assert(!NaN_or_Overflow && float_f2i(ux) == ref || NaN_or_Overflow && float_f2i(ux)==0x80000000);
+
+                ux = (sign << 31) | (exp << 23) | ((1 << 23) - 1 - fraction);
+                ref = (int)u2f(&ux);
+
+                NaN_or_Overflow = false;
+                if (isnan(u2f(&ux)) || u2f(&ux) > INT_MAX || u2f(&ux) < INT_MIN)
+                    NaN_or_Overflow = true;
+
+                assert(!NaN_or_Overflow && float_f2i(ux) == ref || NaN_or_Overflow && float_f2i(ux)==0x80000000);
+            }
+
+    std::cout << "finish float_f2i" << std::endl;
 
     getchar();
 
